@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Circuit Lab ⚡</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; -webkit-user-select:none; user-select:none; -webkit-touch-callout:none; }
+:root {
+  --neon-blue: #00d4ff; --neon-green: #39ff14; --neon-yellow: #ffe600;
+  --neon-red: #ff3366; --neon-purple: #b44aff; --neon-orange: #ff9100;
+  --bg: #0a0e1a; --grid-color: rgba(0,212,255,0.08); --panel-bg: rgba(10,14,26,0.95);
+}
+html,body { width:100%; height:100%; overflow:hidden; background:var(--bg); font-family:'Inter',sans-serif; color:#fff; touch-action:none; }
+
+/* Header */
+#header { position:fixed; top:0; left:0; right:0; height:56px; background:var(--panel-bg); border-bottom:2px solid var(--neon-blue); display:flex; align-items:center; justify-content:space-between; padding:0 16px; z-index:100; }
+#header h1 { font-family:'Orbitron',sans-serif; font-size:20px; color:var(--neon-blue); text-shadow:0 0 10px var(--neon-blue); }
+.mode-btn { font-family:'Orbitron',sans-serif; font-size:13px; padding:8px 16px; border:2px solid var(--neon-blue); background:transparent; color:var(--neon-blue); border-radius:8px; cursor:pointer; min-height:44px; }
+.mode-btn.active { background:var(--neon-blue); color:var(--bg); }
+#header-btns { display:flex; gap:8px; }
+
+/* Toolbar */
+#toolbar { position:fixed; bottom:0; left:0; right:0; height:90px; background:var(--panel-bg); border-top:2px solid var(--neon-blue); display:flex; align-items:center; justify-content:center; gap:10px; padding:0 8px; z-index:100; overflow-x:auto; }
+.tool-item { display:flex; flex-direction:column; align-items:center; justify-content:center; width:72px; min-width:72px; height:72px; border:2px solid rgba(0,212,255,0.3); border-radius:12px; background:rgba(0,212,255,0.05); cursor:grab; transition:all 0.2s; }
+.tool-item:active { transform:scale(0.92); background:rgba(0,212,255,0.15); }
+.tool-item svg { width:36px; height:36px; }
+.tool-label { font-size:10px; color:var(--neon-blue); margin-top:2px; font-weight:600; }
+
+/* Canvas */
+#canvas-wrap { position:fixed; top:56px; left:0; right:0; bottom:90px; overflow:hidden; }
+#grid-canvas { width:100%; height:100%; }
+
+/* Challenge overlay */
+#challenge-panel { display:none; position:fixed; top:56px; left:0; right:0; bottom:90px; background:rgba(0,0,0,0.85); z-index:50; flex-direction:column; align-items:center; justify-content:center; padding:20px; }
+#challenge-panel.show { display:flex; }
+.challenge-card { background:var(--panel-bg); border:2px solid var(--neon-blue); border-radius:16px; padding:24px; margin:8px; text-align:center; width:280px; cursor:pointer; transition:all 0.2s; }
+.challenge-card:active { transform:scale(0.96); border-color:var(--neon-green); }
+.challenge-card h3 { font-family:'Orbitron',sans-serif; font-size:16px; color:var(--neon-yellow); margin-bottom:8px; }
+.challenge-card p { font-size:14px; color:#aaa; }
+.challenge-stars { color:var(--neon-yellow); font-size:20px; margin-top:6px; }
+#challenge-list { display:flex; flex-wrap:wrap; justify-content:center; max-height:80%; overflow-y:auto; }
+
+/* Challenge HUD */
+#challenge-hud { display:none; position:fixed; top:60px; left:50%; transform:translateX(-50%); background:var(--panel-bg); border:2px solid var(--neon-yellow); border-radius:12px; padding:10px 20px; z-index:60; text-align:center; }
+#challenge-hud.show { display:block; }
+#challenge-hud h3 { font-family:'Orbitron',sans-serif; font-size:14px; color:var(--neon-yellow); }
+#challenge-hud p { font-size:12px; color:#ccc; margin-top:4px; }
+#check-btn { margin-top:8px; padding:8px 20px; font-family:'Orbitron',sans-serif; font-size:13px; border:2px solid var(--neon-green); background:transparent; color:var(--neon-green); border-radius:8px; cursor:pointer; min-height:44px; }
+
+/* Success overlay */
+#success-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); z-index:200; flex-direction:column; align-items:center; justify-content:center; }
+#success-overlay.show { display:flex; }
+#success-overlay h2 { font-family:'Orbitron',sans-serif; font-size:28px; color:var(--neon-green); text-shadow:0 0 20px var(--neon-green); }
+#success-overlay .stars { font-size:48px; margin:16px 0; }
+#success-overlay button { padding:12px 32px; font-family:'Orbitron',sans-serif; font-size:16px; border:2px solid var(--neon-blue); background:var(--neon-blue); color:var(--bg); border-radius:12px; cursor:pointer; min-height:52px; margin-top:12px; }
+
+/* Trash zone */
+#trash-zone { display:none; position:fixed; bottom:94px; right:16px; width:64px; height:64px; border-radius:50%; background:rgba(255,51,102,0.2); border:2px solid var(--neon-red); z-index:90; align-items:center; justify-content:center; font-size:28px; }
+#trash-zone.show { display:flex; }
+
+/* Clear button */
+#clear-btn { position:fixed; bottom:94px; left:16px; width:44px; height:44px; border-radius:50%; background:rgba(255,51,102,0.15); border:2px solid var(--neon-red); z-index:90; display:flex; align-items:center; justify-content:center; font-size:20px; cursor:pointer; color:var(--neon-red); }
+
+/* Animations */
+@keyframes glow-pulse { 0%,100%{filter:drop-shadow(0 0 4px var(--neon-yellow));} 50%{filter:drop-shadow(0 0 16px var(--neon-yellow));} }
+@keyframes spin { from{transform:rotate(0deg);} to{transform:rotate(360deg);} }
+@keyframes sound-wave { 0%{opacity:1;r:8;} 100%{opacity:0;r:20;} }
+.powered-bulb { animation: glow-pulse 1s infinite; }
+.powered-motor svg .rotor { animation: spin 0.5s linear infinite; transform-origin:center; }
+
+/* Wire drawing */
+.wire-line { stroke:var(--neon-green); stroke-width:3; stroke-linecap:round; fill:none; }
+.wire-line.powered { stroke:var(--neon-yellow); filter:drop-shadow(0 0 6px var(--neon-yellow)); stroke-width:4; }
+
+/* Terminal dots */
+.terminal { cursor:pointer; }
+.terminal circle { transition: r 0.15s; }
+.terminal:hover circle, .terminal:active circle { r:8; }
+</style>
+</head>
+<body>
+
+<div id="header">
+  <h1>⚡ Circuit Lab</h1>
+  <div id="header-btns">
+    <button class="mode-btn active" onclick="setMode('free')">Free Build</button>
+    <button class="mode-btn" onclick="setMode('challenge')">Challenges</button>
+  </div>
+</div>
+
+<div id="canvas-wrap">
+  <svg id="grid-canvas"></svg>
+</div>
+
+<div id="toolbar"></div>
+
+<div id="trash-zone">🗑️</div>
+<div id="clear-btn" onclick="clearAll()">✕</div>
+
+<div id="challenge-panel">
+  <h2 style="font-family:Orbitron;color:var(--neon-yellow);margin-bottom:16px;">⚡ Challenges</h2>
+  <div id="challenge-list"></div>
+</div>
+
+<div id="challenge-hud">
+  <h3 id="ch-title"></h3>
+  <p id="ch-desc"></p>
+  <button id="check-btn" onclick="checkChallenge()">CHECK CIRCUIT ✓</button>
+</div>
+
+<div id="success-overlay">
+  <h2>⚡ GREAT JOB! ⚡</h2>
+  <div class="stars" id="success-stars"></div>
+  <button onclick="closeSuccess()">CONTINUE</button>
+</div>
+
+<script>
+// ============ CONFIG ============
+const GRID = 60; // snap grid size
+const COMP_W = GRID * 2;
+const COMP_H = GRID;
+
+// ============ STATE ============
+let components = []; // placed components {id, type, x, y, flipped}
+let wires = []; // {id, from:{compId,terminal}, to:{compId,terminal}}
+let nextId = 1;
+let mode = 'free'; // 'free' | 'challenge'
+let activeChallenge = null;
+let challengeProgress = JSON.parse(localStorage.getItem('circuit-lab-progress') || '{}');
+
+// Drag state
+let dragging = null; // {type:'new'|'move', compType, compId, offsetX, offsetY, el}
+let wiring = null; // {fromCompId, fromTerminal, tempLine}
+let touchId = null;
+
+const svg = document.getElementById('grid-canvas');
+const toolbar = document.getElementById('toolbar');
+const trashZone = document.getElementById('trash-zone');
+
+// ============ COMPONENT DEFINITIONS ============
+const COMP_DEFS = {
+  battery: { label:'Battery', color:'var(--neon-green)', terminals:['pos','neg'],
+    svg:`<rect x="10" y="12" width="8" height="36" rx="2" fill="#39ff14" opacity="0.8"/>
+         <rect x="22" y="18" width="4" height="24" rx="1" fill="#39ff14" opacity="0.5"/>
+         <text x="40" y="34" font-size="11" fill="#39ff14" font-family="Orbitron" font-weight="700">+−</text>`},
+  bulb: { label:'Bulb', color:'var(--neon-yellow)', terminals:['left','right'],
+    svg:`<circle cx="30" cy="26" r="14" fill="none" stroke="#ffe600" stroke-width="2.5" opacity="0.7"/>
+         <line x1="25" y1="36" x2="35" y2="36" stroke="#ffe600" stroke-width="2"/>
+         <line x1="27" y1="40" x2="33" y2="40" stroke="#ffe600" stroke-width="1.5"/>
+         <path d="M25 20 Q30 10 35 20" fill="none" stroke="#ffe600" stroke-width="1.5" opacity="0.5"/>`},
+  switch: { label:'Switch', color:'var(--neon-blue)', terminals:['left','right'], hasState:true,
+    svg:`<circle cx="12" cy="30" r="4" fill="#00d4ff"/>
+         <circle cx="48" cy="30" r="4" fill="#00d4ff"/>
+         <line x1="12" y1="30" x2="44" y2="18" stroke="#00d4ff" stroke-width="2.5" class="switch-arm"/>`},
+  motor: { label:'Motor', color:'var(--neon-purple)', terminals:['left','right'],
+    svg:`<circle cx="30" cy="28" r="16" fill="none" stroke="#b44aff" stroke-width="2.5"/>
+         <text x="30" y="33" text-anchor="middle" font-size="14" fill="#b44aff" font-family="Orbitron" font-weight="700">M</text>
+         <line x1="22" y1="20" x2="38" y2="36" stroke="#b44aff" stroke-width="1.5" class="rotor" opacity="0.5"/>`},
+  buzzer: { label:'Buzzer', color:'var(--neon-orange)', terminals:['left','right'],
+    svg:`<path d="M15 18 L15 42 L30 42 L42 48 L42 12 L30 18 Z" fill="none" stroke="#ff9100" stroke-width="2"/>
+         <path d="M46 22 Q52 30 46 38" fill="none" stroke="#ff9100" stroke-width="2" opacity="0.6" class="wave1"/>
+         <path d="M50 18 Q58 30 50 42" fill="none" stroke="#ff9100" stroke-width="1.5" opacity="0.3" class="wave2"/>`},
+  wire_node: { label:'Wire', color:'var(--neon-green)', terminals:['a','b','c','d'], isNode:true,
+    svg:`<circle cx="30" cy="30" r="6" fill="#39ff14" opacity="0.8"/>
+         <circle cx="30" cy="30" r="3" fill="#39ff14"/>`}
+};
+
+// ============ CHALLENGES ============
+const CHALLENGES = [
+  { id:1, title:'Light the Bulb', desc:'Connect a battery to a bulb to make it glow!',
+    require: comps => {
+      const hasBattery = comps.some(c=>c.type==='battery');
+      const hasBulb = comps.some(c=>c.type==='bulb');
+      return hasBattery && hasBulb && checkPowered().some(id => comps.find(c=>c.id===id)?.type==='bulb');
+    }},
+  { id:2, title:'Flip the Switch', desc:'Build a circuit with a switch. Turn it ON to light the bulb!',
+    require: comps => {
+      const hasSwitch = comps.some(c=>c.type==='switch');
+      const hasBulb = comps.some(c=>c.type==='bulb');
+      return hasSwitch && hasBulb && checkPowered().some(id => comps.find(c=>c.id===id)?.type==='bulb');
+    }},
+  { id:3, title:'Spin the Motor', desc:'Connect a battery to a motor and watch it spin!',
+    require: comps => {
+      const hasMotor = comps.some(c=>c.type==='motor');
+      return hasMotor && checkPowered().some(id => comps.find(c=>c.id===id)?.type==='motor');
+    }},
+  { id:4, title:'Sound the Buzzer', desc:'Make the buzzer buzz by completing the circuit!',
+    require: comps => {
+      return checkPowered().some(id => comps.find(c=>c.id===id)?.type==='buzzer');
+    }},
+  { id:5, title:'Two Bulbs', desc:'Light up TWO bulbs with one battery!',
+    require: comps => {
+      const poweredBulbs = checkPowered().filter(id => comps.find(c=>c.id===id)?.type==='bulb');
+      return poweredBulbs.length >= 2;
+    }},
+  { id:6, title:'Motor + Bulb', desc:'Power a motor AND a bulb at the same time!',
+    require: comps => {
+      const powered = checkPowered();
+      const hasMotor = powered.some(id => comps.find(c=>c.id===id)?.type==='motor');
+      const hasBulb = powered.some(id => comps.find(c=>c.id===id)?.type==='bulb');
+      return hasMotor && hasBulb;
+    }},
+  { id:7, title:'Switch Control', desc:'Use a switch to control a motor. Switch must be ON!',
+    require: comps => {
+      const hasSwitch = comps.some(c=>c.type==='switch');
+      return hasSwitch && checkPowered().some(id => comps.find(c=>c.id===id)?.type==='motor');
+    }},
+  { id:8, title:'Full Orchestra', desc:'Power a bulb, motor, AND buzzer all at once!',
+    require: comps => {
+      const powered = checkPowered();
+      const types = powered.map(id => comps.find(c=>c.id===id)?.type);
+      return types.includes('bulb') && types.includes('motor') && types.includes('buzzer');
+    }}
+];
+
+// ============ INIT ============
+function init() {
+  drawGrid();
+  buildToolbar();
+  renderChallengeList();
+  setupEvents();
+  window.addEventListener('resize', () => { drawGrid(); renderAll(); });
+}
+
+function drawGrid() {
+  const w = svg.clientWidth || window.innerWidth;
+  const h = svg.clientHeight || (window.innerHeight - 146);
+  svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+  svg.setAttribute('width', w);
+  svg.setAttribute('height', h);
+  
+  // Remove old grid
+  svg.querySelectorAll('.grid-line').forEach(e=>e.remove());
+  
+  const frag = document.createDocumentFragment();
+  for (let x = 0; x <= w; x += GRID) {
+    const line = document.createElementNS('http://www.w3.org/2000/svg','line');
+    line.setAttribute('x1',x); line.setAttribute('y1',0);
+    line.setAttribute('x2',x); line.setAttribute('y2',h);
+    line.setAttribute('stroke','rgba(0,212,255,0.06)'); line.setAttribute('stroke-width','1');
+    line.classList.add('grid-line');
+    frag.appendChild(line);
+  }
+  for (let y = 0; y <= h; y += GRID) {
+    const line = document.createElementNS('http://www.w3.org/2000/svg','line');
+    line.setAttribute('x1',0); line.setAttribute('y1',y);
+    line.setAttribute('x2',w); line.setAttribute('y2',y);
+    line.setAttribute('stroke','rgba(0,212,255,0.06)'); line.setAttribute('stroke-width','1');
+    line.classList.add('grid-line');
+    frag.appendChild(line);
+  }
+  svg.prepend(frag);
+}
+
+function buildToolbar() {
+  toolbar.innerHTML = '';
+  for (const [type, def] of Object.entries(COMP_DEFS)) {
+    if (type === 'wire_node') continue; // skip wire nodes in toolbar for now
+    const div = document.createElement('div');
+    div.className = 'tool-item';
+    div.dataset.type = type;
+    div.innerHTML = `<svg viewBox="0 0 60 60" width="36" height="36">${def.svg}</svg><span class="tool-label">${def.label}</span>`;
+    
+    // Touch/mouse start
+    div.addEventListener('touchstart', e => startDragNew(type, e.touches[0]), {passive:false});
+    div.addEventListener('mousedown', e => startDragNew(type, e));
+    
+    toolbar.appendChild(div);
+  }
+}
+
+// ============ DRAG & DROP ============
+function startDragNew(type, evt) {
+  evt.preventDefault?.();
+  const rect = svg.getBoundingClientRect();
+  const x = evt.clientX - rect.left;
+  const y = evt.clientY - rect.top;
+  
+  const comp = { id:nextId++, type, x:snap(x - COMP_W/2), y:snap(y - COMP_H/2), state:type==='switch'?false:undefined };
+  components.push(comp);
+  
+  dragging = { type:'move', compId:comp.id, offsetX:COMP_W/2, offsetY:COMP_H/2 };
+  trashZone.classList.add('show');
+  renderAll();
+}
+
+function snap(v) { return Math.round(v / GRID) * GRID; }
+
+function setupEvents() {
+  // Touch
+  svg.addEventListener('touchstart', onPointerDown, {passive:false});
+  svg.addEventListener('touchmove', onPointerMove, {passive:false});
+  svg.addEventListener('touchend', onPointerUp, {passive:false});
+  // Mouse
+  svg.addEventListener('mousedown', onPointerDown);
+  window.addEventListener('mousemove', onPointerMove);
+  window.addEventListener('mouseup', onPointerUp);
+  // Also handle moves from toolbar drag onto canvas
+  window.addEventListener('touchmove', onPointerMove, {passive:false});
+  window.addEventListener('touchend', onPointerUp, {passive:false});
+}
+
+function getPos(evt) {
+  const e = evt.touches ? evt.touches[0] || evt.changedTouches[0] : evt;
+  const rect = svg.getBoundingClientRect();
+  return { x: e.clientX - rect.left, y: e.clientY - rect.top, cx: e.clientX, cy: e.clientY };
+}
+
+function onPointerDown(evt) {
+  const pos = getPos(evt);
+  
+  // Check if clicking a terminal
+  const termHit = hitTerminal(pos.x, pos.y);
+  if (termHit) {
+    evt.preventDefault();
+    // Check if clicking a switch body (not terminal)
+    const comp = components.find(c=>c.id===termHit.compId);
+    
+    // Start wiring
+    const tPos = getTerminalPos(termHit.compId, termHit.terminal);
+    const line = document.createElementNS('http://www.w3.org/2000/svg','line');
+    line.setAttribute('x1', tPos.x); line.setAttribute('y1', tPos.y);
+    line.setAttribute('x2', tPos.x); line.setAttribute('y2', tPos.y);
+    line.classList.add('wire-line');
+    svg.appendChild(line);
+    wiring = { fromCompId:termHit.compId, fromTerminal:termHit.terminal, tempLine:line };
+    return;
+  }
+  
+  // Check if clicking a component to move it
+  const compHit = hitComponent(pos.x, pos.y);
+  if (compHit) {
+    evt.preventDefault();
+    const comp = components.find(c=>c.id===compHit);
+    
+    // Double-tap on switch toggles it
+    if (comp.type === 'switch' && comp._lastTap && Date.now() - comp._lastTap < 400) {
+      comp.state = !comp.state;
+      renderAll();
+      validateCircuit();
+      return;
+    }
+    comp._lastTap = Date.now();
+    
+    dragging = { type:'move', compId:compHit, offsetX:pos.x - comp.x, offsetY:pos.y - comp.y };
+    trashZone.classList.add('show');
+  }
+}
+
+function onPointerMove(evt) {
+  if (!dragging && !wiring) return;
+  evt.preventDefault();
+  const pos = getPos(evt);
+  
+  if (dragging) {
+    const comp = components.find(c=>c.id===dragging.compId);
+    if (comp) {
+      comp.x = snap(pos.x - dragging.offsetX);
+      comp.y = snap(pos.y - dragging.offsetY);
+      renderAll();
+    }
+  }
+  
+  if (wiring) {
+    wiring.tempLine.setAttribute('x2', pos.x);
+    wiring.tempLine.setAttribute('y2', pos.y);
+  }
+}
+
+function onPointerUp(evt) {
+  const pos = getPos(evt);
+  
+  if (dragging) {
+    // Check trash
+    const trashRect = trashZone.getBoundingClientRect();
+    if (pos.cx >= trashRect.left && pos.cx <= trashRect.right && pos.cy >= trashRect.top && pos.cy <= trashRect.bottom) {
+      // Remove component and its wires
+      const id = dragging.compId;
+      components = components.filter(c=>c.id !== id);
+      wires = wires.filter(w=>w.from.compId !== id && w.to.compId !== id);
+    }
+    dragging = null;
+    trashZone.classList.remove('show');
+    renderAll();
+    validateCircuit();
+  }
+  
+  if (wiring) {
+    const termHit = hitTerminal(pos.x, pos.y);
+    if (termHit && (termHit.compId !== wiring.fromCompId || termHit.terminal !== wiring.fromTerminal)) {
+      // Check not duplicate
+      const dup = wires.some(w =>
+        (w.from.compId===wiring.fromCompId && w.from.terminal===wiring.fromTerminal && w.to.compId===termHit.compId && w.to.terminal===termHit.terminal) ||
+        (w.to.compId===wiring.fromCompId && w.to.terminal===wiring.fromTerminal && w.from.compId===termHit.compId && w.from.terminal===termHit.terminal)
+      );
+      if (!dup) {
+        wires.push({
+          id:nextId++,
+          from:{compId:wiring.fromCompId, terminal:wiring.fromTerminal},
+          to:{compId:termHit.compId, terminal:termHit.terminal}
+        });
+      }
+    }
+    wiring.tempLine.remove();
+    wiring = null;
+    renderAll();
+    validateCircuit();
+  }
+}
+
+// ============ HIT TESTING ============
+function hitTerminal(x, y) {
+  const threshold = 24;
+  for (const comp of components) {
+    const terms = getTerminals(comp);
+    for (const [name, tPos] of Object.entries(terms)) {
+      const dx = x - tPos.x, dy = y - tPos.y;
+      if (dx*dx + dy*dy < threshold*threshold) return {compId:comp.id, terminal:name};
+    }
+  }
+  return null;
+}
+
+function hitComponent(x, y) {
+  for (let i = components.length-1; i >= 0; i--) {
+    const c = components[i];
+    if (x >= c.x && x <= c.x+COMP_W && y >= c.y && y <= c.y+COMP_H) return c.id;
+  }
+  return null;
+}
+
+function getTerminals(comp) {
+  const def = COMP_DEFS[comp.type];
+  const terms = {};
+  if (comp.type === 'battery') {
+    terms.pos = {x:comp.x + COMP_W, y:comp.y + COMP_H/2};
+    terms.neg = {x:comp.x, y:comp.y + COMP_H/2};
+  } else if (comp.type === 'wire_node') {
+    terms.a = {x:comp.x + COMP_W/2, y:comp.y};
+    terms.b = {x:comp.x + COMP_W, y:comp.y + COMP_H/2};
+    terms.c = {x:comp.x + COMP_W/2, y:comp.y + COMP_H};
+    terms.d = {x:comp.x, y:comp.y + COMP_H/2};
+  } else {
+    terms.left = {x:comp.x, y:comp.y + COMP_H/2};
+    terms.right = {x:comp.x + COMP_W, y:comp.y + COMP_H/2};
+  }
+  return terms;
+}
+
+function getTerminalPos(compId, terminal) {
+  const comp = components.find(c=>c.id===compId);
+  if (!comp) return {x:0,y:0};
+  return getTerminals(comp)[terminal] || {x:0,y:0};
+}
+
+// ============ RENDERING ============
+function renderAll() {
+  // Remove non-grid elements
+  svg.querySelectorAll('.comp-group, .wire-line, .terminal-dot').forEach(e=>e.remove());
+  
+  // Render wires
+  const poweredSet = checkPowered();
+  for (const w of wires) {
+    const from = getTerminalPos(w.from.compId, w.from.terminal);
+    const to = getTerminalPos(w.to.compId, w.to.terminal);
+    const line = document.createElementNS('http://www.w3.org/2000/svg','line');
+    line.setAttribute('x1',from.x); line.setAttribute('y1',from.y);
+    line.setAttribute('x2',to.x); line.setAttribute('y2',to.y);
+    line.classList.add('wire-line');
+    // Check if this wire is in a powered circuit
+    const fromComp = components.find(c=>c.id===w.from.compId);
+    const toComp = components.find(c=>c.id===w.to.compId);
+    if (poweredSet.has(w.from.compId) && poweredSet.has(w.to.compId)) {
+      line.classList.add('powered');
+    }
+    svg.appendChild(line);
+  }
+  
+  // Render components
+  for (const comp of components) {
+    const def = COMP_DEFS[comp.type];
+    const g = document.createElementNS('http://www.w3.org/2000/svg','g');
+    g.classList.add('comp-group');
+    g.setAttribute('transform',`translate(${comp.x},${comp.y})`);
+    
+    // Background
+    const bg = document.createElementNS('http://www.w3.org/2000/svg','rect');
+    bg.setAttribute('x','0'); bg.setAttribute('y','0');
+    bg.setAttribute('width',COMP_W); bg.setAttribute('height',COMP_H);
+    bg.setAttribute('rx','8'); bg.setAttribute('fill','rgba(0,212,255,0.05)');
+    bg.setAttribute('stroke', poweredSet.has(comp.id) ? 'var(--neon-yellow)' : 'rgba(0,212,255,0.2)');
+    bg.setAttribute('stroke-width','1.5');
+    g.appendChild(bg);
+    
+    // SVG content
+    const content = document.createElementNS('http://www.w3.org/2000/svg','g');
+    // Scale to fit
+    if (comp.type === 'battery') {
+      content.innerHTML = def.svg;
+    } else {
+      content.setAttribute('transform',`translate(${COMP_W/2-30},${COMP_H/2-30})`);
+      content.innerHTML = def.svg;
+    }
+    
+    // Powered effects
+    if (poweredSet.has(comp.id)) {
+      if (comp.type === 'bulb') {
+        const glow = document.createElementNS('http://www.w3.org/2000/svg','circle');
+        glow.setAttribute('cx', COMP_W/2); glow.setAttribute('cy', COMP_H/2 - 4);
+        glow.setAttribute('r','20'); glow.setAttribute('fill','rgba(255,230,0,0.25)');
+        glow.style.animation = 'glow-pulse 1s infinite';
+        g.appendChild(glow);
+        // Bright fill
+        const bright = document.createElementNS('http://www.w3.org/2000/svg','circle');
+        bright.setAttribute('cx', COMP_W/2); bright.setAttribute('cy', COMP_H/2 - 4);
+        bright.setAttribute('r','12'); bright.setAttribute('fill','rgba(255,230,0,0.6)');
+        g.appendChild(bright);
+      }
+      if (comp.type === 'motor') {
+        const spinner = document.createElementNS('http://www.w3.org/2000/svg','g');
+        spinner.setAttribute('transform',`translate(${COMP_W/2},${COMP_H/2-2})`);
+        spinner.innerHTML = `<line x1="-10" y1="0" x2="10" y2="0" stroke="#b44aff" stroke-width="2"/>
+                             <line x1="0" y1="-10" x2="0" y2="10" stroke="#b44aff" stroke-width="2"/>`;
+        spinner.style.animation = 'spin 0.4s linear infinite';
+        spinner.style.transformOrigin = `${COMP_W/2}px ${COMP_H/2-2}px`;
+        g.appendChild(spinner);
+      }
+      if (comp.type === 'buzzer') {
+        for (let i = 0; i < 3; i++) {
+          const wave = document.createElementNS('http://www.w3.org/2000/svg','circle');
+          wave.setAttribute('cx', COMP_W/2 + 15); wave.setAttribute('cy', COMP_H/2);
+          wave.setAttribute('r','8'); wave.setAttribute('fill','none');
+          wave.setAttribute('stroke','var(--neon-orange)'); wave.setAttribute('stroke-width','1.5');
+          wave.style.animation = `sound-wave 1s ${i*0.3}s infinite`;
+          g.appendChild(wave);
+        }
+      }
+    }
+    
+    // Switch visual state
+    if (comp.type === 'switch') {
+      content.innerHTML = ''; // Rebuild
+      const closed = comp.state;
+      content.innerHTML = `
+        <circle cx="12" cy="30" r="5" fill="#00d4ff"/>
+        <circle cx="48" cy="30" r="5" fill="#00d4ff"/>
+        <line x1="12" y1="30" x2="${closed?48:44}" y2="${closed?30:16}" stroke="#00d4ff" stroke-width="3"/>
+        <text x="30" y="52" text-anchor="middle" font-size="8" fill="#00d4ff">${closed?'ON':'OFF'}</text>
+      `;
+      content.setAttribute('transform',`translate(${COMP_W/2-30},${COMP_H/2-30})`);
+    }
+    
+    g.appendChild(content);
+    
+    // Terminals
+    const terms = getTerminals(comp);
+    for (const [name, tPos] of Object.entries(terms)) {
+      const tc = document.createElementNS('http://www.w3.org/2000/svg','g');
+      tc.classList.add('terminal-dot');
+      const dot = document.createElementNS('http://www.w3.org/2000/svg','circle');
+      dot.setAttribute('cx', tPos.x); dot.setAttribute('cy', tPos.y);
+      dot.setAttribute('r','6');
+      dot.setAttribute('fill', poweredSet.has(comp.id) ? 'var(--neon-yellow)' : def.color);
+      dot.setAttribute('stroke','#fff'); dot.setAttribute('stroke-width','1.5');
+      dot.setAttribute('opacity','0.8');
+      tc.classList.add('terminal');
+      svg.appendChild(tc);
+      tc.appendChild(dot);
+      
+      // Terminal label for battery
+      if (comp.type === 'battery') {
+        const label = document.createElementNS('http://www.w3.org/2000/svg','text');
+        label.setAttribute('x', tPos.x + (name==='pos'?8:-8));
+        label.setAttribute('y', tPos.y - 10);
+        label.setAttribute('text-anchor','middle');
+        label.setAttribute('font-size','12');
+        label.setAttribute('fill','#39ff14');
+        label.setAttribute('font-weight','bold');
+        label.textContent = name==='pos' ? '+' : '−';
+        svg.appendChild(label);
+      }
+    }
+    
+    svg.appendChild(g);
+  }
+}
+
+// ============ CIRCUIT VALIDATION ============
+function checkPowered() {
+  // Find all batteries, trace closed loops
+  const poweredIds = new Set();
+  const batteries = components.filter(c=>c.type==='battery');
+  
+  for (const bat of batteries) {
+    // BFS from battery positive terminal
+    // We need to find a path from battery.pos back to battery.neg through wires and components
+    const visited = new Set();
+    const found = findPath(bat.id, 'pos', bat.id, 'neg', visited);
+    if (found) {
+      for (const id of visited) poweredIds.add(id);
+      poweredIds.add(bat.id);
+    }
+  }
+  
+  return poweredIds;
+}
+
+function findPath(startCompId, startTerminal, targetCompId, targetTerminal, visited) {
+  // Build adjacency: terminal -> [connected terminals]
+  // Each component internally connects its terminals (except battery which has separate + and -)
+  
+  const queue = [{compId:startCompId, terminal:startTerminal, depth:0}];
+  const seen = new Set();
+  seen.add(`${startCompId}:${startTerminal}`);
+  
+  while (queue.length > 0) {
+    const {compId, terminal, depth} = queue.shift();
+    
+    // Follow wires from this terminal
+    for (const w of wires) {
+      let nextCompId, nextTerminal;
+      if (w.from.compId === compId && w.from.terminal === terminal) {
+        nextCompId = w.to.compId; nextTerminal = w.to.terminal;
+      } else if (w.to.compId === compId && w.to.terminal === terminal) {
+        nextCompId = w.from.compId; nextTerminal = w.from.terminal;
+      } else continue;
+      
+      const key = `${nextCompId}:${nextTerminal}`;
+      if (seen.has(key)) continue;
+      
+      // Check if we reached target
+      if (nextCompId === targetCompId && nextTerminal === targetTerminal && depth > 0) {
+        visited.add(nextCompId);
+        // Trace back: add all visited component IDs
+        for (const k of seen) visited.add(parseInt(k.split(':')[0]));
+        return true;
+      }
+      
+      seen.add(key);
+      visited.add(nextCompId);
+      
+      // Internal component connections: traverse through component
+      const comp = components.find(c=>c.id===nextCompId);
+      if (!comp) continue;
+      
+      // Switch blocks if open
+      if (comp.type === 'switch' && !comp.state) continue;
+      
+      // Battery doesn't conduct internally between pos and neg
+      if (comp.type === 'battery') continue;
+      
+      // For other components, all terminals are internally connected
+      const otherTerminals = getInternalConnections(comp, nextTerminal);
+      for (const ot of otherTerminals) {
+        const otKey = `${nextCompId}:${ot}`;
+        if (!seen.has(otKey)) {
+          seen.add(otKey);
+          queue.push({compId:nextCompId, terminal:ot, depth:depth+1});
+        }
+      }
+    }
+  }
+  return false;
+}
+
+function getInternalConnections(comp, fromTerminal) {
+  const def = COMP_DEFS[comp.type];
+  // Return other terminals this one connects to internally
+  return def.terminals.filter(t => t !== fromTerminal);
+}
+
+function validateCircuit() {
+  renderAll(); // Re-render with powered state
+}
+
+// ============ MODES ============
+function setMode(m) {
+  mode = m;
+  document.querySelectorAll('.mode-btn').forEach(b => b.classList.toggle('active', b.textContent.toLowerCase().includes(m)));
+  document.getElementById('challenge-panel').classList.toggle('show', m==='challenge');
+  document.getElementById('challenge-hud').classList.remove('show');
+  activeChallenge = null;
+  if (m === 'challenge') {
+    renderChallengeList();
+  }
+}
+
+function renderChallengeList() {
+  const list = document.getElementById('challenge-list');
+  list.innerHTML = '';
+  for (const ch of CHALLENGES) {
+    const stars = challengeProgress[ch.id] || 0;
+    const card = document.createElement('div');
+    card.className = 'challenge-card';
+    card.innerHTML = `<h3>${ch.title}</h3><p>${ch.desc}</p><div class="challenge-stars">${'⭐'.repeat(stars)}${'☆'.repeat(3-stars)}</div>`;
+    card.onclick = () => startChallenge(ch);
+    list.appendChild(card);
+  }
+}
+
+function startChallenge(ch) {
+  activeChallenge = ch;
+  clearAll();
+  document.getElementById('challenge-panel').classList.remove('show');
+  document.getElementById('challenge-hud').classList.add('show');
+  document.getElementById('ch-title').textContent = ch.title;
+  document.getElementById('ch-desc').textContent = ch.desc;
+  mode = 'playing';
+}
+
+function checkChallenge() {
+  if (!activeChallenge) return;
+  const success = activeChallenge.require(components);
+  if (success) {
+    const stars = Math.min(3, 1 + Math.floor(Math.random()*2) + (components.length <= 4 ? 1 : 0));
+    challengeProgress[activeChallenge.id] = Math.max(challengeProgress[activeChallenge.id]||0, stars);
+    localStorage.setItem('circuit-lab-progress', JSON.stringify(challengeProgress));
+    showSuccess(stars);
+  } else {
+    // Shake the check button
+    const btn = document.getElementById('check-btn');
+    btn.style.borderColor = 'var(--neon-red)';
+    btn.style.color = 'var(--neon-red)';
+    btn.textContent = 'NOT YET... TRY AGAIN!';
+    setTimeout(() => {
+      btn.style.borderColor = 'var(--neon-green)';
+      btn.style.color = 'var(--neon-green)';
+      btn.textContent = 'CHECK CIRCUIT ✓';
+    }, 1500);
+  }
+}
+
+function showSuccess(stars) {
+  document.getElementById('success-stars').textContent = '⭐'.repeat(stars);
+  document.getElementById('success-overlay').classList.add('show');
+}
+
+function closeSuccess() {
+  document.getElementById('success-overlay').classList.remove('show');
+  document.getElementById('challenge-hud').classList.remove('show');
+  activeChallenge = null;
+  setMode('challenge');
+}
+
+function clearAll() {
+  components = [];
+  wires = [];
+  renderAll();
+}
+
+// ============ START ============
+init();
+</script>
+</body>
+</html>
