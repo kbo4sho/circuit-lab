@@ -22,18 +22,25 @@ html,body { width:100%; height:100%; overflow:hidden; background:var(--bg); font
 #header-btns { display:flex; gap:8px; }
 
 /* Toolbar */
-#toolbar { position:fixed; bottom:0; left:0; right:0; height:90px; background:var(--panel-bg); border-top:2px solid var(--neon-blue); display:flex; align-items:center; justify-content:center; gap:10px; padding:0 8px; z-index:100; overflow-x:auto; }
-.tool-item { display:flex; flex-direction:column; align-items:center; justify-content:center; width:72px; min-width:72px; height:72px; border:2px solid rgba(0,212,255,0.3); border-radius:12px; background:rgba(0,212,255,0.05); cursor:grab; transition:all 0.2s; }
+#toolbar { position:fixed; bottom:0; left:0; right:0; height:100px; background:var(--panel-bg); border-top:2px solid var(--neon-blue); display:flex; align-items:center; justify-content:center; gap:12px; padding:0 12px; z-index:100; overflow-x:auto; }
+.tool-item { display:flex; flex-direction:column; align-items:center; justify-content:center; width:80px; min-width:80px; height:80px; border:3px solid rgba(0,212,255,0.3); border-radius:14px; background:rgba(0,212,255,0.05); cursor:grab; transition:all 0.2s; }
 .tool-item:active { transform:scale(0.92); background:rgba(0,212,255,0.15); }
-.tool-item svg { width:36px; height:36px; }
-.tool-label { font-size:10px; color:var(--neon-blue); margin-top:2px; font-weight:600; }
+.tool-item.selected { border-color:var(--neon-yellow); background:rgba(255,230,0,0.15); box-shadow:0 0 20px rgba(255,230,0,0.3); }
+.tool-item svg { width:40px; height:40px; }
+.tool-label { font-size:11px; color:var(--neon-blue); margin-top:4px; font-weight:600; }
+.tool-item.selected .tool-label { color:var(--neon-yellow); }
 
 /* Canvas */
-#canvas-wrap { position:fixed; top:56px; left:0; right:0; bottom:90px; overflow:hidden; }
+#canvas-wrap { position:fixed; top:56px; left:0; right:0; bottom:100px; overflow:hidden; }
 #grid-canvas { width:100%; height:100%; }
 
+/* Tap to place indicator */
+#place-hint { display:none; position:fixed; top:60px; left:50%; transform:translateX(-50%); background:var(--neon-yellow); color:var(--bg); font-family:'Orbitron',sans-serif; font-size:12px; padding:8px 16px; border-radius:20px; z-index:80; animation:pulse-hint 1.5s infinite; }
+#place-hint.show { display:block; }
+@keyframes pulse-hint { 0%,100%{opacity:0.9;} 50%{opacity:1;box-shadow:0 0 15px var(--neon-yellow);} }
+
 /* Challenge overlay */
-#challenge-panel { display:none; position:fixed; top:56px; left:0; right:0; bottom:90px; background:rgba(0,0,0,0.85); z-index:50; flex-direction:column; align-items:center; justify-content:center; padding:20px; }
+#challenge-panel { display:none; position:fixed; top:56px; left:0; right:0; bottom:100px; background:rgba(0,0,0,0.85); z-index:50; flex-direction:column; align-items:center; justify-content:center; padding:20px; }
 #challenge-panel.show { display:flex; }
 .challenge-card { background:var(--panel-bg); border:2px solid var(--neon-blue); border-radius:16px; padding:24px; margin:8px; text-align:center; width:280px; cursor:pointer; transition:all 0.2s; }
 .challenge-card:active { transform:scale(0.96); border-color:var(--neon-green); }
@@ -57,27 +64,34 @@ html,body { width:100%; height:100%; overflow:hidden; background:var(--bg); font
 #success-overlay button { padding:12px 32px; font-family:'Orbitron',sans-serif; font-size:16px; border:2px solid var(--neon-blue); background:var(--neon-blue); color:var(--bg); border-radius:12px; cursor:pointer; min-height:52px; margin-top:12px; }
 
 /* Trash zone */
-#trash-zone { display:none; position:fixed; bottom:94px; right:16px; width:64px; height:64px; border-radius:50%; background:rgba(255,51,102,0.2); border:2px solid var(--neon-red); z-index:90; align-items:center; justify-content:center; font-size:28px; }
+#trash-zone { display:none; position:fixed; bottom:104px; right:16px; width:72px; height:72px; border-radius:50%; background:rgba(255,51,102,0.2); border:3px solid var(--neon-red); z-index:90; align-items:center; justify-content:center; font-size:32px; }
 #trash-zone.show { display:flex; }
 
 /* Clear button */
-#clear-btn { position:fixed; bottom:94px; left:16px; width:44px; height:44px; border-radius:50%; background:rgba(255,51,102,0.15); border:2px solid var(--neon-red); z-index:90; display:flex; align-items:center; justify-content:center; font-size:20px; cursor:pointer; color:var(--neon-red); }
+#clear-btn { position:fixed; bottom:104px; left:16px; width:52px; height:52px; border-radius:50%; background:rgba(255,51,102,0.15); border:2px solid var(--neon-red); z-index:90; display:flex; align-items:center; justify-content:center; font-size:22px; cursor:pointer; color:var(--neon-red); }
 
 /* Animations */
 @keyframes glow-pulse { 0%,100%{filter:drop-shadow(0 0 4px var(--neon-yellow));} 50%{filter:drop-shadow(0 0 16px var(--neon-yellow));} }
 @keyframes spin { from{transform:rotate(0deg);} to{transform:rotate(360deg);} }
 @keyframes sound-wave { 0%{opacity:1;r:8;} 100%{opacity:0;r:20;} }
+@keyframes terminal-pulse { 0%,100%{r:12;opacity:0.7;} 50%{r:16;opacity:1;} }
+@keyframes terminal-ring { 0%{r:14;opacity:0.6;} 100%{r:24;opacity:0;} }
 .powered-bulb { animation: glow-pulse 1s infinite; }
 .powered-motor svg .rotor { animation: spin 0.5s linear infinite; transform-origin:center; }
 
 /* Wire drawing */
-.wire-line { stroke:var(--neon-green); stroke-width:3; stroke-linecap:round; fill:none; }
-.wire-line.powered { stroke:var(--neon-yellow); filter:drop-shadow(0 0 6px var(--neon-yellow)); stroke-width:4; }
+.wire-line { stroke:var(--neon-green); stroke-width:4; stroke-linecap:round; fill:none; }
+.wire-line.powered { stroke:var(--neon-yellow); filter:drop-shadow(0 0 6px var(--neon-yellow)); stroke-width:5; }
 
-/* Terminal dots */
+/* Terminal dots - MUCH bigger for touch */
 .terminal { cursor:pointer; }
-.terminal circle { transition: r 0.15s; }
-.terminal:hover circle, .terminal:active circle { r:8; }
+.terminal circle.terminal-core { transition: r 0.15s, fill 0.15s; }
+.terminal circle.terminal-ring { animation: terminal-ring 2s infinite; }
+.terminal:hover circle.terminal-core, .terminal:active circle.terminal-core { r:16; }
+
+/* Drag ghost */
+#drag-ghost { position:fixed; pointer-events:none; z-index:1000; opacity:0.85; display:none; }
+#drag-ghost.show { display:block; }
 </style>
 </head>
 <body>
@@ -96,6 +110,7 @@ html,body { width:100%; height:100%; overflow:hidden; background:var(--bg); font
 
 <div id="toolbar"></div>
 
+<div id="place-hint">TAP CANVAS TO PLACE</div>
 <div id="trash-zone">🗑️</div>
 <div id="clear-btn" onclick="clearAll()">✕</div>
 
@@ -116,28 +131,36 @@ html,body { width:100%; height:100%; overflow:hidden; background:var(--bg); font
   <button onclick="closeSuccess()">CONTINUE</button>
 </div>
 
+<div id="drag-ghost"></div>
+
 <script>
 // ============ CONFIG ============
 const GRID = 60; // snap grid size
 const COMP_W = GRID * 2;
 const COMP_H = GRID;
+const TERMINAL_RADIUS = 12; // Visual radius for terminals (bigger for touch)
+const TERMINAL_HIT_RADIUS = 40; // Hit detection radius (very generous for kids)
+const TAP_THRESHOLD = 12; // Max movement for a tap vs drag
 
 // ============ STATE ============
-let components = []; // placed components {id, type, x, y, flipped}
+let components = []; // placed components {id, type, x, y, state}
 let wires = []; // {id, from:{compId,terminal}, to:{compId,terminal}}
 let nextId = 1;
 let mode = 'free'; // 'free' | 'challenge'
 let activeChallenge = null;
 let challengeProgress = JSON.parse(localStorage.getItem('circuit-lab-progress') || '{}');
 
-// Drag state
-let dragging = null; // {type:'new'|'move', compType, compId, offsetX, offsetY, el}
+// Interaction state
+let dragging = null; // {compId, offsetX, offsetY, startX, startY, startCompX, startCompY, moved}
 let wiring = null; // {fromCompId, fromTerminal, tempLine}
-let touchId = null;
+let selectedTool = null; // for tap-to-place mode
+let touchStartPos = null; // track initial touch position
 
 const svg = document.getElementById('grid-canvas');
 const toolbar = document.getElementById('toolbar');
 const trashZone = document.getElementById('trash-zone');
+const dragGhost = document.getElementById('drag-ghost');
+const placeHint = document.getElementById('place-hint');
 
 // ============ COMPONENT DEFINITIONS ============
 const COMP_DEFS = {
@@ -226,7 +249,7 @@ function init() {
 
 function drawGrid() {
   const w = svg.clientWidth || window.innerWidth;
-  const h = svg.clientHeight || (window.innerHeight - 146);
+  const h = svg.clientHeight || (window.innerHeight - 156);
   svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
   svg.setAttribute('width', w);
   svg.setAttribute('height', h);
@@ -261,134 +284,204 @@ function buildToolbar() {
     const div = document.createElement('div');
     div.className = 'tool-item';
     div.dataset.type = type;
-    div.innerHTML = `<svg viewBox="0 0 60 60" width="36" height="36">${def.svg}</svg><span class="tool-label">${def.label}</span>`;
+    div.innerHTML = `<svg viewBox="0 0 60 60" width="40" height="40">${def.svg}</svg><span class="tool-label">${def.label}</span>`;
     
-    // Touch/mouse start
-    div.addEventListener('touchstart', e => startDragNew(type, e.touches[0]), {passive:false});
-    div.addEventListener('mousedown', e => startDragNew(type, e));
+    // Touch start - for tap-to-place or drag
+    div.addEventListener('touchstart', e => onToolbarTouch(type, e), {passive:false});
+    div.addEventListener('mousedown', e => onToolbarMouse(type, e));
     
     toolbar.appendChild(div);
   }
 }
 
-// ============ DRAG & DROP ============
-function startDragNew(type, evt) {
-  evt.preventDefault?.();
+// ============ TOOLBAR INTERACTION ============
+function onToolbarTouch(type, evt) {
+  evt.preventDefault();
+  const touch = evt.touches[0];
+  touchStartPos = { x: touch.clientX, y: touch.clientY, type: type };
+  
+  // Show ghost for potential drag
+  showDragGhost(type, touch.clientX, touch.clientY);
+}
+
+function onToolbarMouse(type, evt) {
+  evt.preventDefault();
+  touchStartPos = { x: evt.clientX, y: evt.clientY, type: type };
+  showDragGhost(type, evt.clientX, evt.clientY);
+}
+
+function showDragGhost(type, x, y) {
+  const def = COMP_DEFS[type];
+  dragGhost.innerHTML = `<svg viewBox="0 0 ${COMP_W} ${COMP_H}" width="${COMP_W}" height="${COMP_H}">
+    <rect x="0" y="0" width="${COMP_W}" height="${COMP_H}" rx="8" fill="rgba(0,212,255,0.15)" stroke="var(--neon-blue)" stroke-width="2"/>
+    <g transform="translate(${COMP_W/2-30},${COMP_H/2-30})">${def.svg}</g>
+  </svg>`;
+  dragGhost.style.left = (x - COMP_W/2) + 'px';
+  dragGhost.style.top = (y - COMP_H/2) + 'px';
+  dragGhost.classList.add('show');
+}
+
+function hideDragGhost() {
+  dragGhost.classList.remove('show');
+}
+
+// Select tool for tap-to-place
+function selectTool(type) {
+  // Clear any existing selection
+  document.querySelectorAll('.tool-item').forEach(t => t.classList.remove('selected'));
+  
+  if (selectedTool === type) {
+    // Deselect
+    selectedTool = null;
+    placeHint.classList.remove('show');
+  } else {
+    selectedTool = type;
+    // Highlight the selected tool
+    const toolEl = document.querySelector(`.tool-item[data-type="${type}"]`);
+    if (toolEl) toolEl.classList.add('selected');
+    placeHint.classList.add('show');
+  }
+}
+
+function clearToolSelection() {
+  selectedTool = null;
+  document.querySelectorAll('.tool-item').forEach(t => t.classList.remove('selected'));
+  placeHint.classList.remove('show');
+}
+
+// ============ COORDINATE HELPERS ============
+function screenToSvg(clientX, clientY) {
   const rect = svg.getBoundingClientRect();
-  const x = evt.clientX - rect.left;
-  const y = evt.clientY - rect.top;
-  
-  const comp = { id:nextId++, type, x:snap(x - COMP_W/2), y:snap(y - COMP_H/2), state:type==='switch'?false:undefined };
-  components.push(comp);
-  
-  dragging = { type:'move', compId:comp.id, offsetX:COMP_W/2, offsetY:COMP_H/2 };
-  trashZone.classList.add('show');
-  renderAll();
+  return {
+    x: clientX - rect.left,
+    y: clientY - rect.top
+  };
 }
 
 function snap(v) { return Math.round(v / GRID) * GRID; }
 
+// ============ EVENT SETUP ============
 function setupEvents() {
-  // Touch
-  svg.addEventListener('touchstart', onPointerDown, {passive:false});
-  svg.addEventListener('touchmove', onPointerMove, {passive:false});
-  svg.addEventListener('touchend', onPointerUp, {passive:false});
-  // Mouse
-  svg.addEventListener('mousedown', onPointerDown);
-  window.addEventListener('mousemove', onPointerMove);
-  window.addEventListener('mouseup', onPointerUp);
-  // Also handle moves from toolbar drag onto canvas
-  window.addEventListener('touchmove', onPointerMove, {passive:false});
-  window.addEventListener('touchend', onPointerUp, {passive:false});
+  // Window-level touch/mouse for dragging from toolbar
+  window.addEventListener('touchmove', onGlobalMove, {passive:false});
+  window.addEventListener('touchend', onGlobalEnd, {passive:false});
+  window.addEventListener('mousemove', onGlobalMove);
+  window.addEventListener('mouseup', onGlobalEnd);
+  
+  // Canvas events
+  svg.addEventListener('touchstart', onCanvasDown, {passive:false});
+  svg.addEventListener('mousedown', onCanvasDown);
 }
 
-function getPos(evt) {
+function getEventPos(evt) {
   const e = evt.touches ? evt.touches[0] || evt.changedTouches[0] : evt;
-  const rect = svg.getBoundingClientRect();
-  return { x: e.clientX - rect.left, y: e.clientY - rect.top, cx: e.clientX, cy: e.clientY };
+  return { clientX: e.clientX, clientY: e.clientY };
 }
 
-function onPointerDown(evt) {
-  const pos = getPos(evt);
+// ============ GLOBAL MOVE/END (for toolbar drag) ============
+function onGlobalMove(evt) {
+  const pos = getEventPos(evt);
   
-  // Check if clicking a terminal
-  const termHit = hitTerminal(pos.x, pos.y);
-  if (termHit) {
-    evt.preventDefault();
-    // Check if clicking a switch body (not terminal)
-    const comp = components.find(c=>c.id===termHit.compId);
+  // Dragging from toolbar?
+  if (touchStartPos && !dragging && !wiring) {
+    const dx = pos.clientX - touchStartPos.x;
+    const dy = pos.clientY - touchStartPos.y;
+    const dist = Math.sqrt(dx*dx + dy*dy);
     
-    // Start wiring
-    const tPos = getTerminalPos(termHit.compId, termHit.terminal);
-    const line = document.createElementNS('http://www.w3.org/2000/svg','line');
-    line.setAttribute('x1', tPos.x); line.setAttribute('y1', tPos.y);
-    line.setAttribute('x2', tPos.x); line.setAttribute('y2', tPos.y);
-    line.classList.add('wire-line');
-    svg.appendChild(line);
-    wiring = { fromCompId:termHit.compId, fromTerminal:termHit.terminal, tempLine:line };
-    return;
-  }
-  
-  // Check if clicking a component to move it
-  const compHit = hitComponent(pos.x, pos.y);
-  if (compHit) {
-    evt.preventDefault();
-    const comp = components.find(c=>c.id===compHit);
-    
-    // Double-tap on switch toggles it
-    if (comp.type === 'switch' && comp._lastTap && Date.now() - comp._lastTap < 400) {
-      comp.state = !comp.state;
-      renderAll();
-      validateCircuit();
-      return;
+    if (dist > TAP_THRESHOLD) {
+      // User is dragging from toolbar - show ghost following finger
+      evt.preventDefault();
+      dragGhost.style.left = (pos.clientX - COMP_W/2) + 'px';
+      dragGhost.style.top = (pos.clientY - COMP_H/2) + 'px';
     }
-    comp._lastTap = Date.now();
-    
-    dragging = { type:'move', compId:compHit, offsetX:pos.x - comp.x, offsetY:pos.y - comp.y };
-    trashZone.classList.add('show');
   }
-}
-
-function onPointerMove(evt) {
-  if (!dragging && !wiring) return;
-  evt.preventDefault();
-  const pos = getPos(evt);
   
+  // Dragging a component?
   if (dragging) {
+    evt.preventDefault();
+    const svgPos = screenToSvg(pos.clientX, pos.clientY);
     const comp = components.find(c=>c.id===dragging.compId);
     if (comp) {
-      comp.x = snap(pos.x - dragging.offsetX);
-      comp.y = snap(pos.y - dragging.offsetY);
+      comp.x = snap(svgPos.x - dragging.offsetX);
+      comp.y = snap(svgPos.y - dragging.offsetY);
+      
+      // Track total movement
+      const totalDx = pos.clientX - dragging.startX;
+      const totalDy = pos.clientY - dragging.startY;
+      dragging.moved = Math.sqrt(totalDx*totalDx + totalDy*totalDy);
+      
       renderAll();
     }
   }
   
+  // Drawing a wire?
   if (wiring) {
-    wiring.tempLine.setAttribute('x2', pos.x);
-    wiring.tempLine.setAttribute('y2', pos.y);
+    evt.preventDefault();
+    const svgPos = screenToSvg(pos.clientX, pos.clientY);
+    wiring.tempLine.setAttribute('x2', svgPos.x);
+    wiring.tempLine.setAttribute('y2', svgPos.y);
   }
 }
 
-function onPointerUp(evt) {
-  const pos = getPos(evt);
+function onGlobalEnd(evt) {
+  const pos = getEventPos(evt);
   
+  // Was dragging from toolbar?
+  if (touchStartPos && !dragging && !wiring) {
+    hideDragGhost();
+    
+    const dx = pos.clientX - touchStartPos.x;
+    const dy = pos.clientY - touchStartPos.y;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+    
+    const svgRect = svg.getBoundingClientRect();
+    const overCanvas = pos.clientX >= svgRect.left && pos.clientX <= svgRect.right &&
+                       pos.clientY >= svgRect.top && pos.clientY <= svgRect.bottom;
+    
+    if (dist > TAP_THRESHOLD && overCanvas) {
+      // Drop new component on canvas
+      const svgPos = screenToSvg(pos.clientX, pos.clientY);
+      placeComponent(touchStartPos.type, svgPos.x, svgPos.y);
+    } else if (dist <= TAP_THRESHOLD) {
+      // Tap on toolbar - select tool for tap-to-place
+      selectTool(touchStartPos.type);
+    }
+    
+    touchStartPos = null;
+  }
+  
+  // Was dragging a component?
   if (dragging) {
-    // Check trash
+    // Check if dropped on trash
     const trashRect = trashZone.getBoundingClientRect();
-    if (pos.cx >= trashRect.left && pos.cx <= trashRect.right && pos.cy >= trashRect.top && pos.cy <= trashRect.bottom) {
-      // Remove component and its wires
+    if (pos.clientX >= trashRect.left && pos.clientX <= trashRect.right &&
+        pos.clientY >= trashRect.top && pos.clientY <= trashRect.bottom) {
+      // Delete component
       const id = dragging.compId;
       components = components.filter(c=>c.id !== id);
       wires = wires.filter(w=>w.from.compId !== id && w.to.compId !== id);
+    } else if (dragging.moved <= TAP_THRESHOLD) {
+      // This was a tap, not a drag - check if it's a switch to toggle
+      const comp = components.find(c=>c.id===dragging.compId);
+      if (comp && comp.type === 'switch') {
+        comp.state = !comp.state;
+      }
+      // Restore original position
+      comp.x = dragging.startCompX;
+      comp.y = dragging.startCompY;
     }
+    
     dragging = null;
     trashZone.classList.remove('show');
     renderAll();
     validateCircuit();
   }
   
+  // Was drawing a wire?
   if (wiring) {
-    const termHit = hitTerminal(pos.x, pos.y);
+    const svgPos = screenToSvg(pos.clientX, pos.clientY);
+    const termHit = hitTerminal(svgPos.x, svgPos.y);
+    
     if (termHit && (termHit.compId !== wiring.fromCompId || termHit.terminal !== wiring.fromTerminal)) {
       // Check not duplicate
       const dup = wires.some(w =>
@@ -403,6 +496,7 @@ function onPointerUp(evt) {
         });
       }
     }
+    
     wiring.tempLine.remove();
     wiring = null;
     renderAll();
@@ -410,29 +504,101 @@ function onPointerUp(evt) {
   }
 }
 
+// ============ CANVAS INTERACTION ============
+function onCanvasDown(evt) {
+  evt.preventDefault();
+  const pos = getEventPos(evt);
+  const svgPos = screenToSvg(pos.clientX, pos.clientY);
+  
+  // Tap-to-place mode?
+  if (selectedTool) {
+    placeComponent(selectedTool, svgPos.x, svgPos.y);
+    clearToolSelection();
+    return;
+  }
+  
+  // Check if touching a terminal first (priority for wiring)
+  const termHit = hitTerminal(svgPos.x, svgPos.y);
+  if (termHit) {
+    // Start wiring
+    const tPos = getTerminalPos(termHit.compId, termHit.terminal);
+    const line = document.createElementNS('http://www.w3.org/2000/svg','line');
+    line.setAttribute('x1', tPos.x); line.setAttribute('y1', tPos.y);
+    line.setAttribute('x2', tPos.x); line.setAttribute('y2', tPos.y);
+    line.classList.add('wire-line');
+    svg.appendChild(line);
+    wiring = { fromCompId:termHit.compId, fromTerminal:termHit.terminal, tempLine:line };
+    return;
+  }
+  
+  // Check if touching a component body (for moving)
+  const compHit = hitComponent(svgPos.x, svgPos.y);
+  if (compHit) {
+    const comp = components.find(c=>c.id===compHit);
+    dragging = {
+      compId: compHit,
+      offsetX: svgPos.x - comp.x,
+      offsetY: svgPos.y - comp.y,
+      startX: pos.clientX,
+      startY: pos.clientY,
+      startCompX: comp.x,
+      startCompY: comp.y,
+      moved: 0
+    };
+    trashZone.classList.add('show');
+    return;
+  }
+}
+
+// ============ PLACE COMPONENT ============
+function placeComponent(type, x, y) {
+  const comp = {
+    id: nextId++,
+    type: type,
+    x: snap(x - COMP_W/2),
+    y: snap(y - COMP_H/2),
+    state: type === 'switch' ? false : undefined
+  };
+  components.push(comp);
+  renderAll();
+  validateCircuit();
+}
+
 // ============ HIT TESTING ============
 function hitTerminal(x, y) {
-  const threshold = 24;
+  // Use bigger hit radius for touch
+  const threshold = TERMINAL_HIT_RADIUS;
+  let closest = null;
+  let closestDist = Infinity;
+  
   for (const comp of components) {
     const terms = getTerminals(comp);
     for (const [name, tPos] of Object.entries(terms)) {
       const dx = x - tPos.x, dy = y - tPos.y;
-      if (dx*dx + dy*dy < threshold*threshold) return {compId:comp.id, terminal:name};
+      const dist = Math.sqrt(dx*dx + dy*dy);
+      if (dist < threshold && dist < closestDist) {
+        closest = {compId:comp.id, terminal:name};
+        closestDist = dist;
+      }
+    }
+  }
+  return closest;
+}
+
+function hitComponent(x, y) {
+  // Inflate hit area slightly for touch
+  const padding = 8;
+  for (let i = components.length-1; i >= 0; i--) {
+    const c = components[i];
+    if (x >= c.x - padding && x <= c.x + COMP_W + padding && 
+        y >= c.y - padding && y <= c.y + COMP_H + padding) {
+      return c.id;
     }
   }
   return null;
 }
 
-function hitComponent(x, y) {
-  for (let i = components.length-1; i >= 0; i--) {
-    const c = components[i];
-    if (x >= c.x && x <= c.x+COMP_W && y >= c.y && y <= c.y+COMP_H) return c.id;
-  }
-  return null;
-}
-
 function getTerminals(comp) {
-  const def = COMP_DEFS[comp.type];
   const terms = {};
   if (comp.type === 'battery') {
     terms.pos = {x:comp.x + COMP_W, y:comp.y + COMP_H/2};
@@ -458,7 +624,7 @@ function getTerminalPos(compId, terminal) {
 // ============ RENDERING ============
 function renderAll() {
   // Remove non-grid elements
-  svg.querySelectorAll('.comp-group, .wire-line, .terminal-dot').forEach(e=>e.remove());
+  svg.querySelectorAll('.comp-group, .wire-line, .terminal-group').forEach(e=>e.remove());
   
   // Render wires
   const poweredSet = checkPowered();
@@ -470,8 +636,6 @@ function renderAll() {
     line.setAttribute('x2',to.x); line.setAttribute('y2',to.y);
     line.classList.add('wire-line');
     // Check if this wire is in a powered circuit
-    const fromComp = components.find(c=>c.id===w.from.compId);
-    const toComp = components.find(c=>c.id===w.to.compId);
     if (poweredSet.has(w.from.compId) && poweredSet.has(w.to.compId)) {
       line.classList.add('powered');
     }
@@ -553,37 +717,63 @@ function renderAll() {
     }
     
     g.appendChild(content);
-    
-    // Terminals
+    svg.appendChild(g);
+  }
+  
+  // Render terminals LAST (on top) for easy touch
+  for (const comp of components) {
+    const def = COMP_DEFS[comp.type];
     const terms = getTerminals(comp);
+    const isPowered = poweredSet.has(comp.id);
+    
     for (const [name, tPos] of Object.entries(terms)) {
       const tc = document.createElementNS('http://www.w3.org/2000/svg','g');
-      tc.classList.add('terminal-dot');
+      tc.classList.add('terminal-group', 'terminal');
+      
+      // Animated ring pulse (teaches kids where to connect)
+      const ring = document.createElementNS('http://www.w3.org/2000/svg','circle');
+      ring.setAttribute('cx', tPos.x); ring.setAttribute('cy', tPos.y);
+      ring.setAttribute('r', TERMINAL_RADIUS + 2);
+      ring.setAttribute('fill', 'none');
+      ring.setAttribute('stroke', isPowered ? 'var(--neon-yellow)' : def.color);
+      ring.setAttribute('stroke-width', '2');
+      ring.setAttribute('opacity', '0.5');
+      ring.classList.add('terminal-ring');
+      tc.appendChild(ring);
+      
+      // Main terminal dot (BIG for fingers)
       const dot = document.createElementNS('http://www.w3.org/2000/svg','circle');
       dot.setAttribute('cx', tPos.x); dot.setAttribute('cy', tPos.y);
-      dot.setAttribute('r','6');
-      dot.setAttribute('fill', poweredSet.has(comp.id) ? 'var(--neon-yellow)' : def.color);
-      dot.setAttribute('stroke','#fff'); dot.setAttribute('stroke-width','1.5');
-      dot.setAttribute('opacity','0.8');
-      tc.classList.add('terminal');
-      svg.appendChild(tc);
+      dot.setAttribute('r', TERMINAL_RADIUS);
+      dot.setAttribute('fill', isPowered ? 'var(--neon-yellow)' : def.color);
+      dot.setAttribute('stroke', '#fff');
+      dot.setAttribute('stroke-width', '2');
+      dot.classList.add('terminal-core');
       tc.appendChild(dot);
+      
+      // Inner glow
+      const inner = document.createElementNS('http://www.w3.org/2000/svg','circle');
+      inner.setAttribute('cx', tPos.x); inner.setAttribute('cy', tPos.y);
+      inner.setAttribute('r', TERMINAL_RADIUS / 2);
+      inner.setAttribute('fill', '#fff');
+      inner.setAttribute('opacity', '0.3');
+      tc.appendChild(inner);
+      
+      svg.appendChild(tc);
       
       // Terminal label for battery
       if (comp.type === 'battery') {
         const label = document.createElementNS('http://www.w3.org/2000/svg','text');
-        label.setAttribute('x', tPos.x + (name==='pos'?8:-8));
-        label.setAttribute('y', tPos.y - 10);
+        label.setAttribute('x', tPos.x + (name==='pos'?16:-16));
+        label.setAttribute('y', tPos.y - 14);
         label.setAttribute('text-anchor','middle');
-        label.setAttribute('font-size','12');
+        label.setAttribute('font-size','14');
         label.setAttribute('fill','#39ff14');
         label.setAttribute('font-weight','bold');
         label.textContent = name==='pos' ? '+' : '−';
         svg.appendChild(label);
       }
     }
-    
-    svg.appendChild(g);
   }
 }
 
@@ -682,6 +872,7 @@ function setMode(m) {
   document.getElementById('challenge-panel').classList.toggle('show', m==='challenge');
   document.getElementById('challenge-hud').classList.remove('show');
   activeChallenge = null;
+  clearToolSelection();
   if (m === 'challenge') {
     renderChallengeList();
   }
@@ -747,6 +938,7 @@ function closeSuccess() {
 function clearAll() {
   components = [];
   wires = [];
+  clearToolSelection();
   renderAll();
 }
 
