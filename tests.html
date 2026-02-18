@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Circuit Lab Tests ⚡</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+  --bg: #0a0e1a;
+  --panel: #141b2d;
+  --pass: #39ff14;
+  --fail: #ff3366;
+  --text: #e0e0e0;
+  --muted: #888;
+  --border: #2a3650;
+}
+body {
+  font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
+  background: var(--bg);
+  color: var(--text);
+  padding: 20px;
+  line-height: 1.6;
+}
+h1 {
+  color: #00d4ff;
+  margin-bottom: 20px;
+  text-shadow: 0 0 10px #00d4ff;
+}
+.summary {
+  background: var(--panel);
+  padding: 16px 24px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  border: 1px solid var(--border);
+  font-size: 18px;
+}
+.summary.all-pass { border-color: var(--pass); box-shadow: 0 0 15px rgba(57,255,20,0.2); }
+.summary.has-fail { border-color: var(--fail); box-shadow: 0 0 15px rgba(255,51,102,0.2); }
+.pass-count { color: var(--pass); font-weight: bold; }
+.fail-count { color: var(--fail); font-weight: bold; }
+.suite {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin-bottom: 16px;
+  overflow: hidden;
+}
+.suite-header {
+  background: #1a2438;
+  padding: 12px 16px;
+  font-weight: bold;
+  color: #00d4ff;
+  cursor: pointer;
+}
+.suite-header:hover { background: #1e2a42; }
+.suite-tests { padding: 8px 16px; }
+.test {
+  padding: 6px 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-bottom: 1px solid var(--border);
+}
+.test:last-child { border-bottom: none; }
+.test-icon { font-size: 14px; }
+.test.pass .test-icon { color: var(--pass); }
+.test.fail .test-icon { color: var(--fail); }
+.test.fail { background: rgba(255,51,102,0.05); }
+.test-name { flex: 1; }
+.test-error {
+  color: var(--fail);
+  font-size: 12px;
+  padding: 4px 0 4px 24px;
+  opacity: 0.9;
+}
+.progress-bar {
+  height: 6px;
+  background: #1a2438;
+  border-radius: 3px;
+  overflow: hidden;
+  margin-top: 12px;
+}
+.progress-fill {
+  height: 100%;
+  transition: width 0.3s;
+}
+.progress-fill.pass { background: var(--pass); }
+.progress-fill.fail { background: var(--fail); }
+#running { color: var(--muted); animation: pulse 1s infinite; }
+@keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.5;} }
+</style>
+</head>
+<body>
+<h1>⚡ Circuit Lab Tests</h1>
+<div id="summary" class="summary">
+  <span id="running">Running tests...</span>
+  <div id="results" style="display:none;">
+    <span class="pass-count" id="pass-count">0</span> passed,
+    <span class="fail-count" id="fail-count">0</span> failed
+    <div class="progress-bar">
+      <div class="progress-fill" id="progress"></div>
+    </div>
+  </div>
+</div>
+<div id="suites"></div>
+
+<script>
+// ============ CIRCUIT LAB CORE LOGIC (extracted) ============
+const GRID = 60;
+const COMP_W = GRID * 2;
+const COMP_H = GRID;
+const TERMINAL_HIT_RADIUS = 40;
+
+const COMP_DEFS = {
+  battery: { label:'Battery', terminals:['pos','neg'] },
+  bulb: { label:'Bulb', terminals:['left','right'] },
+  switch: { label:'Switch', terminals:['left','right'], hasState:true },
+  motor: { label:'Motor', terminals:['left','right'] },
+  buzzer: { label:'Buzzer', terminals:['left','right'] },
+  wire_node: { label:'Wire', terminals:['a','b','c','d'], isNode:true }
+};
+
+function snap(v) { return Math.round(v / GRID) * GRID; }
+
+function getTerminals(comp) {
+  const terms = {};
+  if (comp.type === 'battery') {
+    terms.pos = {x:comp.x + COMP_W, y:comp.y + COMP_H/2};
+    terms.neg = {x:comp.x, y:comp.y + COMP_H/2};
+  } else if (comp.type === 'wire_node') {
+    terms.a = {x:comp.x + COMP_W/2, y:comp.y};
+    terms.b = {x:comp.x + COMP_W, y:comp.y + COMP_H/2};
+    terms.c = {x:comp.x + COMP_W/2, y:comp.y + COMP_H};
+    terms.d = {x:comp.x, y:comp.y + COMP_H/2};
+  } else {
+    terms.left = {x:comp.x, y:comp.y + COMP_H/2};
+    terms.right = {x:comp.x + COMP_W, y:comp.y + COMP_H/2};
+  }
+  return terms;
+}
+
+function hitTerminal(components, x, y) {
+  const threshold = TERMINAL_HIT_RADIUS;
+  let closest = null;
+  let closestDist = Infinity;
+  for (const comp of components) {
+    const terms = getTerminals(comp);
+    for (const [name, tPos] of Object.entries(terms)) {
+      const dx = x - tPos.x, dy = y - tPos.y;
+      const dist = Math.sqrt(dx*dx + dy*dy);
+      if (dist < threshold && dist < closestDist) {
+        closest = {compId:comp.id, terminal:name};
+        closestDist = dist;
+      }
+    }
+  }
+  return closest;
+}
+
+function getInternalConnections(comp, fromTerminal) {
+  const def = COMP_DEFS[comp.type];
+  return def.terminals.filter(t => t !== fromTerminal);
+}
+
+function findPath(components, wires, startCompId, startTerminal, targetCompId, targetTerminal, visited) {
+  const queue = [{compId:startCompId, terminal:startTerminal, depth:0}];
+  const seen = new Set();
+  seen.add(`${startCompId}:${startTerminal}`);
+  
+  while (queue.length > 0) {
+    const {compId, terminal, depth} = queue.shift();
+    for (const w of wires) {
+      let nextCompId, nextTerminal;
+      if (w.from.compId === compId && w.from.terminal === terminal) {
+        nextCompId = w.to.compId; nextTerminal = w.to.terminal;
+      } else if (w.to.compId === compId && w.to.terminal === terminal) {
+        nextCompId = w.from.compId; nextTerminal = w.from.terminal;
+      } else continue;
+      
+      const key = `${nextCompId}:${nextTerminal}`;
+      if (seen.has(key)) continue;
+      
+      if (nextCompId === targetCompId && nextTerminal === targetTerminal && depth > 0) {
+        visited.add(nextCompId);
+        for (const k of seen) visited.add(parseInt(k.split(':')[0]));
+        return true;
+      }
+      
+      seen.add(key);
+      visited.add(nextCompId);
+      
+      const comp = components.find(c=>c.id===nextCompId);
+      if (!comp) continue;
+      if (comp.type === 'switch' && !comp.state) continue;
+      if (comp.type === 'battery') continue;
+      
+      const otherTerminals = getInternalConnections(comp, nextTerminal);
+      for (const ot of otherTerminals) {
+        const otKey = `${nextCompId}:${ot}`;
+        if (!seen.has(otKey)) {
+          seen.add(otKey);
+          queue.push({compId:nextCompId, terminal:ot, depth:depth+1});
+        }
+      }
+    }
+  }
+  return false;
+}
+
+function checkPowered(components, wires) {
+  const poweredIds = new Set();
+  const batteries = components.filter(c=>c.type==='battery');
+  for (const bat of batteries) {
+    const visited = new Set();
+    const found = findPath(components, wires, bat.id, 'pos', bat.id, 'neg', visited);
+    if (found) {
+      for (const id of visited) poweredIds.add(id);
+      poweredIds.add(bat.id);
+    }
+  }
+  return poweredIds;
+}
+
+function isDuplicateWire(wires, from, to) {
+  return wires.some(w =>
+    (w.from.compId===from.compId && w.from.terminal===from.terminal && w.to.compId===to.compId && w.to.terminal===to.terminal) ||
+    (w.to.compId===from.compId && w.to.terminal===from.terminal && w.from.compId===to.compId && w.from.terminal===to.terminal)
+  );
+}
+
+function createComponent(type, x, y, id, state) {
+  return {
+    id: id,
+    type: type,
+    x: snap(x),
+    y: snap(y),
+    state: type === 'switch' ? (state !== undefined ? state : false) : undefined
+  };
+}
+
+// ============ TEST HARNESS ============
+const suites = [];
+let currentSuite = null;
+let totalPassed = 0;
+let totalFailed = 0;
+
+function describe(name, fn) {
+  currentSuite = { name, tests: [] };
+  suites.push(currentSuite);
+  fn();
+}
+
+function test(name, fn) {
+  const result = { name, pass: true, error: null };
+  try {
+    fn();
+    totalPassed++;
+  } catch (e) {
+    result.pass = false;
+    result.error = e.message;
+    totalFailed++;
+  }
+  currentSuite.tests.push(result);
+}
+
+function assert(cond, msg = 'Assertion failed') {
+  if (!cond) throw new Error(msg);
+}
+
+function assertEqual(a, b, msg = '') {
+  if (a !== b) throw new Error(`${msg ? msg + ': ' : ''}Expected ${JSON.stringify(b)}, got ${JSON.stringify(a)}`);
+}
+
+function assertDeepEqual(a, b, msg = '') {
+  if (JSON.stringify(a) !== JSON.stringify(b)) {
+    throw new Error(`${msg ? msg + ': ' : ''}Expected ${JSON.stringify(b)}, got ${JSON.stringify(a)}`);
+  }
+}
+
+// ============ TESTS ============
+
+describe('snap() - Grid Snapping', () => {
+  test('rounds to nearest grid (0)', () => assertEqual(snap(0), 0));
+  test('rounds to nearest grid (exact)', () => { assertEqual(snap(60), 60); assertEqual(snap(120), 120); });
+  test('rounds up when closer to higher grid', () => { assertEqual(snap(35), 60); assertEqual(snap(90), 120); });
+  test('rounds down when closer to lower grid', () => { assertEqual(snap(25), 0); assertEqual(snap(80), 60); });
+  test('handles negative values', () => { assertEqual(snap(-10), 0); assertEqual(snap(-35), -60); });
+});
+
+describe('Component Management', () => {
+  test('adding a component increases array', () => {
+    const components = [];
+    components.push(createComponent('battery', 100, 100, 1));
+    assertEqual(components.length, 1);
+  });
+  test('removing a component removes it from array', () => {
+    const components = [createComponent('battery', 100, 100, 1), createComponent('bulb', 200, 100, 2)];
+    const newComps = components.filter(c => c.id !== 1);
+    assertEqual(newComps.length, 1);
+  });
+  test('removing a component removes its wires', () => {
+    const wires = [
+      {id: 1, from: {compId: 1, terminal: 'pos'}, to: {compId: 2, terminal: 'left'}},
+      {id: 2, from: {compId: 2, terminal: 'right'}, to: {compId: 1, terminal: 'neg'}},
+      {id: 3, from: {compId: 2, terminal: 'left'}, to: {compId: 3, terminal: 'right'}}
+    ];
+    const newWires = wires.filter(w => w.from.compId !== 1 && w.to.compId !== 1);
+    assertEqual(newWires.length, 1);
+  });
+  test('components get unique IDs', () => {
+    let nextId = 1;
+    const c1 = createComponent('battery', 100, 100, nextId++);
+    const c2 = createComponent('bulb', 200, 100, nextId++);
+    assert(c1.id !== c2.id, 'IDs should be unique');
+  });
+});
+
+describe('Terminal Positions', () => {
+  test('battery has pos on right, neg on left', () => {
+    const bat = createComponent('battery', 0, 0, 1);
+    const terms = getTerminals(bat);
+    assert(terms.pos.x > terms.neg.x, 'pos should be to the right');
+  });
+  test('bulb has left and right terminals', () => {
+    const bulb = createComponent('bulb', 0, 0, 1);
+    const terms = getTerminals(bulb);
+    assert('left' in terms && 'right' in terms);
+  });
+  test('terminal positions update when component moves', () => {
+    const bulb = createComponent('bulb', 0, 0, 1);
+    bulb.x = 120; bulb.y = 60;
+    const terms = getTerminals(bulb);
+    assertEqual(terms.left.x, 120);
+  });
+  test('hitTerminal returns correct component/terminal', () => {
+    const components = [createComponent('battery', 0, 0, 1)];
+    const terms = getTerminals(components[0]);
+    const hit = hitTerminal(components, terms.pos.x, terms.pos.y);
+    assertEqual(hit.compId, 1);
+    assertEqual(hit.terminal, 'pos');
+  });
+  test('hitTerminal returns null for empty space', () => {
+    const components = [createComponent('battery', 0, 0, 1)];
+    assertEqual(hitTerminal(components, 500, 500), null);
+  });
+});
+
+describe('Wire Management', () => {
+  test('can create wire between terminals', () => {
+    const wires = [];
+    wires.push({id:1, from:{compId:1,terminal:'pos'}, to:{compId:2,terminal:'left'}});
+    assertEqual(wires.length, 1);
+  });
+  test('duplicate wires are detected', () => {
+    const wires = [{id:1, from:{compId:1,terminal:'pos'}, to:{compId:2,terminal:'left'}}];
+    assert(isDuplicateWire(wires, {compId:1,terminal:'pos'}, {compId:2,terminal:'left'}));
+  });
+  test('reversed duplicates are detected', () => {
+    const wires = [{id:1, from:{compId:1,terminal:'pos'}, to:{compId:2,terminal:'left'}}];
+    assert(isDuplicateWire(wires, {compId:2,terminal:'left'}, {compId:1,terminal:'pos'}));
+  });
+  test('non-duplicates pass', () => {
+    const wires = [{id:1, from:{compId:1,terminal:'pos'}, to:{compId:2,terminal:'left'}}];
+    assert(!isDuplicateWire(wires, {compId:1,terminal:'neg'}, {compId:2,terminal:'right'}));
+  });
+});
+
+describe('Circuit Validation (checkPowered)', () => {
+  test('battery + bulb in loop = powered', () => {
+    const comps = [createComponent('battery',0,0,1), createComponent('bulb',120,0,2)];
+    const wires = [
+      {id:1,from:{compId:1,terminal:'pos'},to:{compId:2,terminal:'left'}},
+      {id:2,from:{compId:2,terminal:'right'},to:{compId:1,terminal:'neg'}}
+    ];
+    assert(checkPowered(comps,wires).has(2));
+  });
+  test('battery + bulb no return = not powered', () => {
+    const comps = [createComponent('battery',0,0,1), createComponent('bulb',120,0,2)];
+    const wires = [{id:1,from:{compId:1,terminal:'pos'},to:{compId:2,terminal:'left'}}];
+    assert(!checkPowered(comps,wires).has(2));
+  });
+  test('switch OFF breaks circuit', () => {
+    const comps = [
+      createComponent('battery',0,0,1),
+      createComponent('switch',120,0,2,false),
+      createComponent('bulb',240,0,3)
+    ];
+    const wires = [
+      {id:1,from:{compId:1,terminal:'pos'},to:{compId:2,terminal:'left'}},
+      {id:2,from:{compId:2,terminal:'right'},to:{compId:3,terminal:'left'}},
+      {id:3,from:{compId:3,terminal:'right'},to:{compId:1,terminal:'neg'}}
+    ];
+    assert(!checkPowered(comps,wires).has(3));
+  });
+  test('switch ON completes circuit', () => {
+    const comps = [
+      createComponent('battery',0,0,1),
+      createComponent('switch',120,0,2,true),
+      createComponent('bulb',240,0,3)
+    ];
+    const wires = [
+      {id:1,from:{compId:1,terminal:'pos'},to:{compId:2,terminal:'left'}},
+      {id:2,from:{compId:2,terminal:'right'},to:{compId:3,terminal:'left'}},
+      {id:3,from:{compId:3,terminal:'right'},to:{compId:1,terminal:'neg'}}
+    ];
+    assert(checkPowered(comps,wires).has(3));
+  });
+  test('motor in loop = powered', () => {
+    const comps = [createComponent('battery',0,0,1), createComponent('motor',120,0,2)];
+    const wires = [
+      {id:1,from:{compId:1,terminal:'pos'},to:{compId:2,terminal:'left'}},
+      {id:2,from:{compId:2,terminal:'right'},to:{compId:1,terminal:'neg'}}
+    ];
+    assert(checkPowered(comps,wires).has(2));
+  });
+  test('buzzer in loop = powered', () => {
+    const comps = [createComponent('battery',0,0,1), createComponent('buzzer',120,0,2)];
+    const wires = [
+      {id:1,from:{compId:1,terminal:'pos'},to:{compId:2,terminal:'left'}},
+      {id:2,from:{compId:2,terminal:'right'},to:{compId:1,terminal:'neg'}}
+    ];
+    assert(checkPowered(comps,wires).has(2));
+  });
+  test('two bulbs in series = both powered', () => {
+    const comps = [
+      createComponent('battery',0,0,1),
+      createComponent('bulb',120,0,2),
+      createComponent('bulb',240,0,3)
+    ];
+    const wires = [
+      {id:1,from:{compId:1,terminal:'pos'},to:{compId:2,terminal:'left'}},
+      {id:2,from:{compId:2,terminal:'right'},to:{compId:3,terminal:'left'}},
+      {id:3,from:{compId:3,terminal:'right'},to:{compId:1,terminal:'neg'}}
+    ];
+    const p = checkPowered(comps,wires);
+    assert(p.has(2) && p.has(3));
+  });
+  test('no battery = nothing powered', () => {
+    const comps = [createComponent('bulb',0,0,1)];
+    assertEqual(checkPowered(comps,[]).size, 0);
+  });
+  test('battery alone = not powered', () => {
+    const comps = [createComponent('battery',0,0,1)];
+    assert(!checkPowered(comps,[]).has(1));
+  });
+});
+
+describe('Switch Logic', () => {
+  test('switch starts OFF', () => assertEqual(createComponent('switch',0,0,1).state, false));
+  test('toggle to ON', () => { const s = createComponent('switch',0,0,1); s.state = !s.state; assertEqual(s.state, true); });
+  test('toggle back to OFF', () => { const s = createComponent('switch',0,0,1); s.state = !s.state; s.state = !s.state; assertEqual(s.state, false); });
+});
+
+describe('Challenge Validation', () => {
+  test('Light the Bulb: passes with loop', () => {
+    const comps = [createComponent('battery',0,0,1), createComponent('bulb',120,0,2)];
+    const wires = [
+      {id:1,from:{compId:1,terminal:'pos'},to:{compId:2,terminal:'left'}},
+      {id:2,from:{compId:2,terminal:'right'},to:{compId:1,terminal:'neg'}}
+    ];
+    const powered = checkPowered(comps, wires);
+    const hasBattery = comps.some(c=>c.type==='battery');
+    const hasBulb = comps.some(c=>c.type==='bulb');
+    const bulbPowered = [...powered].some(id => comps.find(c=>c.id===id)?.type==='bulb');
+    assert(hasBattery && hasBulb && bulbPowered);
+  });
+  test('Light the Bulb: fails without loop', () => {
+    const comps = [createComponent('battery',0,0,1), createComponent('bulb',120,0,2)];
+    const wires = [{id:1,from:{compId:1,terminal:'pos'},to:{compId:2,terminal:'left'}}];
+    const powered = checkPowered(comps, wires);
+    const bulbPowered = [...powered].some(id => comps.find(c=>c.id===id)?.type==='bulb');
+    assert(!bulbPowered);
+  });
+  test('Two Bulbs: needs 2 powered', () => {
+    const comps = [createComponent('battery',0,0,1), createComponent('bulb',120,0,2), createComponent('bulb',240,0,3)];
+    const wires = [
+      {id:1,from:{compId:1,terminal:'pos'},to:{compId:2,terminal:'left'}},
+      {id:2,from:{compId:2,terminal:'right'},to:{compId:3,terminal:'left'}},
+      {id:3,from:{compId:3,terminal:'right'},to:{compId:1,terminal:'neg'}}
+    ];
+    const powered = checkPowered(comps, wires);
+    const bulbCount = [...powered].filter(id => comps.find(c=>c.id===id)?.type==='bulb').length;
+    assert(bulbCount >= 2);
+  });
+  test('Full Orchestra: needs bulb+motor+buzzer', () => {
+    const comps = [
+      createComponent('battery',0,0,1),
+      createComponent('bulb',120,0,2),
+      createComponent('motor',240,0,3),
+      createComponent('buzzer',360,0,4)
+    ];
+    const wires = [
+      {id:1,from:{compId:1,terminal:'pos'},to:{compId:2,terminal:'left'}},
+      {id:2,from:{compId:2,terminal:'right'},to:{compId:3,terminal:'left'}},
+      {id:3,from:{compId:3,terminal:'right'},to:{compId:4,terminal:'left'}},
+      {id:4,from:{compId:4,terminal:'right'},to:{compId:1,terminal:'neg'}}
+    ];
+    const powered = checkPowered(comps, wires);
+    const types = [...powered].map(id => comps.find(c=>c.id===id)?.type);
+    assert(types.includes('bulb') && types.includes('motor') && types.includes('buzzer'));
+  });
+});
+
+describe('Edge Cases', () => {
+  test('empty circuit has no powered', () => assertEqual(checkPowered([],[]).size, 0));
+  test('wire_node has 4 terminals', () => {
+    const node = createComponent('wire_node',0,0,1);
+    assertEqual(Object.keys(getTerminals(node)).length, 4);
+  });
+  test('50 components does not break', () => {
+    const comps = [];
+    for (let i = 1; i <= 50; i++) comps.push(createComponent('bulb', i*10, 0, i));
+    assertEqual(checkPowered(comps,[]).size, 0);
+  });
+});
+
+describe('Internal Connections', () => {
+  test('bulb connects left to right', () => {
+    const bulb = createComponent('bulb',0,0,1);
+    assertDeepEqual(getInternalConnections(bulb,'left'), ['right']);
+  });
+  test('wire_node connects all terminals', () => {
+    const node = createComponent('wire_node',0,0,1);
+    assertEqual(getInternalConnections(node,'a').length, 3);
+  });
+});
+
+// ============ RENDER RESULTS ============
+function render() {
+  document.getElementById('running').style.display = 'none';
+  document.getElementById('results').style.display = 'block';
+  document.getElementById('pass-count').textContent = totalPassed;
+  document.getElementById('fail-count').textContent = totalFailed;
+  
+  const total = totalPassed + totalFailed;
+  const pct = total > 0 ? (totalPassed / total * 100) : 0;
+  const progress = document.getElementById('progress');
+  progress.style.width = pct + '%';
+  progress.className = 'progress-fill ' + (totalFailed > 0 ? 'fail' : 'pass');
+  
+  document.getElementById('summary').className = 'summary ' + (totalFailed > 0 ? 'has-fail' : 'all-pass');
+  
+  const container = document.getElementById('suites');
+  for (const suite of suites) {
+    const div = document.createElement('div');
+    div.className = 'suite';
+    
+    const header = document.createElement('div');
+    header.className = 'suite-header';
+    const failCount = suite.tests.filter(t => !t.pass).length;
+    header.textContent = suite.name + (failCount > 0 ? ` (${failCount} failed)` : '');
+    header.onclick = () => testsDiv.style.display = testsDiv.style.display === 'none' ? 'block' : 'none';
+    div.appendChild(header);
+    
+    const testsDiv = document.createElement('div');
+    testsDiv.className = 'suite-tests';
+    for (const t of suite.tests) {
+      const testDiv = document.createElement('div');
+      testDiv.className = 'test ' + (t.pass ? 'pass' : 'fail');
+      testDiv.innerHTML = `<span class="test-icon">${t.pass ? '✓' : '✗'}</span><span class="test-name">${t.name}</span>`;
+      testsDiv.appendChild(testDiv);
+      if (!t.pass && t.error) {
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'test-error';
+        errorDiv.textContent = t.error;
+        testsDiv.appendChild(errorDiv);
+      }
+    }
+    div.appendChild(testsDiv);
+    container.appendChild(div);
+  }
+}
+
+render();
+</script>
+</body>
+</html>

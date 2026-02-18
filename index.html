@@ -623,8 +623,8 @@ function getTerminalPos(compId, terminal) {
 
 // ============ RENDERING ============
 function renderAll() {
-  // Remove non-grid elements
-  svg.querySelectorAll('.comp-group, .wire-line, .terminal-group').forEach(e=>e.remove());
+  // Remove non-grid elements (including battery terminal labels)
+  svg.querySelectorAll('.comp-group, .wire-line, .terminal-group, .terminal-label').forEach(e=>e.remove());
   
   // Render wires
   const poweredSet = checkPowered();
@@ -764,6 +764,7 @@ function renderAll() {
       // Terminal label for battery
       if (comp.type === 'battery') {
         const label = document.createElementNS('http://www.w3.org/2000/svg','text');
+        label.classList.add('terminal-label');
         label.setAttribute('x', tPos.x + (name==='pos'?16:-16));
         label.setAttribute('y', tPos.y - 14);
         label.setAttribute('text-anchor','middle');
